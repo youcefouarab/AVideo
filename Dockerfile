@@ -164,7 +164,7 @@ RUN mkdir -p /var/www/tmp && \
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN git clone https://github.com/youcefouarab/AVideo.git /var/www/html/AVideo
+COPY . /var/www/html/AVideo 
 
 WORKDIR /var/www/html/AVideo/
 
