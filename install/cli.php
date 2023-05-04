@@ -22,7 +22,7 @@ if($isANewInstall){
 }
 
 $_POST['systemRootPath'] = "{$_POST["systemRootPath"]}Encoder/";
-$_POST["databaseHost"] = "{$_POST["databaseHost"]}_encoder";
+$_POST["databaseHost"] = "{$_POST["databaseHost"]}-encoder";
 $_POST["databaseName"] = "{$_POST["databaseName"]}_encoder";
 $_POST['tablesPrefix'] = "";
 $_POST['createTables'] = 1;

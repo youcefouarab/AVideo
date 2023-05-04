@@ -35,7 +35,7 @@ services:
       DB_MYSQL_USER: "${DB_MYSQL_USER:-avideo}"
       DB_MYSQL_PASSWORD: "${DB_MYSQL_PASSWORD:-avideo}"
       SERVER_NAME: "${SERVER_NAME:-localhost}"
-      ENABLE_PHPMYADMIN: "${ENABLE_PHPMYADMIN:-yes}"
+      ENABLE_PHPMYADMIN: "${ENABLE_PHPMYADMIN:-no}"
       PHPMYADMIN_PORT: ${PHPMYADMIN_PORT:-8081}
       PHPMYADMIN_ENCODER_PORT: ${PHPMYADMIN_ENCODER_PORT:-8082}
       CREATE_TLS_CERTIFICATE: "${CREATE_TLS_CERTIFICATE:-yes}"
@@ -57,9 +57,9 @@ services:
     volumes:
       - "./.compose/tmp:/var/www/tmp"
       - "./.compose/HLS:/HLS"
-      - "./:/var/www/html/AVideo"
+      #- "./:/var/www/html/AVideo"
       - "./.compose/videos:/var/www/html/AVideo/videos"
-      - "./.compose/encoder:/var/www/html/AVideo/Encoder"
+      #- "./.compose/encoder:/var/www/html/AVideo/Encoder"
       - "./.compose/letsencrypt:/etc/letsencrypt/"
     depends_on:
       database:
@@ -129,7 +129,7 @@ services:
     networks:
       - app_net
 
-  database_encoder:
+  database-encoder:
     image: "mariadb:latest"
     restart: "unless-stopped"
     environment:
@@ -149,38 +149,38 @@ services:
       - app_net
 
   #http://localhost:8081
-  phpmyadmin:
-    image: "phpmyadmin/phpmyadmin"
-    restart: "unless-stopped"
-    environment:
-      PMA_HOST: "${DB_MYSQL_HOST}"
-      PMA_PORT: ${DB_MYSQL_PORT}
-      PMA_CONTROLUSER: "${DB_MYSQL_USER}"
-      PMA_CONTROLPASS: "${DB_MYSQL_PASSWORD}"
-      HIDE_PHP_VERSION: "true"
-    ports:
-      - "${PHPMYADMIN_PORT:-8081}:80"
-    depends_on:
-      - database
-    networks:
-      - app_net
+  #phpmyadmin:
+  #  image: "phpmyadmin/phpmyadmin"
+  #  restart: "unless-stopped"
+  #  environment:
+  #    PMA_HOST: "${DB_MYSQL_HOST}"
+  #    PMA_PORT: ${DB_MYSQL_PORT}
+  #    PMA_CONTROLUSER: "${DB_MYSQL_USER}"
+  #    PMA_CONTROLPASS: "${DB_MYSQL_PASSWORD}"
+  #    HIDE_PHP_VERSION: "true"
+  #  ports:
+  #    - "${PHPMYADMIN_PORT:-8081}:80"
+  #  depends_on:
+  #    - database
+  #  networks:
+  #    - app_net
 
   #http://localhost:8082
-  phpmyadmin_encoder:
-    image: "phpmyadmin/phpmyadmin"
-    restart: "unless-stopped"
-    environment:
-      PMA_HOST: "${DB_MYSQL_HOST}_encoder"
-      PMA_PORT: ${DB_MYSQL_PORT}
-      PMA_CONTROLUSER: "${DB_MYSQL_USER}"
-      PMA_CONTROLPASS: "${DB_MYSQL_PASSWORD}"
-      HIDE_PHP_VERSION: "true"
-    ports:
-      - "${PHPMYADMIN_ENCODER_PORT:-8082}:80"
-    depends_on:
-      - database_encoder
-    networks:
-      - app_net
+  #phpmyadmin_encoder:
+  #  image: "phpmyadmin/phpmyadmin"
+  #  restart: "unless-stopped"
+  #  environment:
+  #    PMA_HOST: "${DB_MYSQL_HOST}_encoder"
+  #    PMA_PORT: ${DB_MYSQL_PORT}
+  #    PMA_CONTROLUSER: "${DB_MYSQL_USER}"
+  #    PMA_CONTROLPASS: "${DB_MYSQL_PASSWORD}"
+  #    HIDE_PHP_VERSION: "true"
+  #  ports:
+  #    - "${PHPMYADMIN_ENCODER_PORT:-8082}:80"
+  #  depends_on:
+  #    - database_encoder
+  #  networks:
+  #    - app_net
 
 networks:
   app_net:
