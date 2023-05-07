@@ -77,7 +77,7 @@ else
   echo "entrypoint -- Create new locations tables..."
   cd /var/www/html/AVideo/plugin/User_Location/install && unzip install.zip 
   # Configure AVideo Encoder
-  cd /var/www/html/AVideo && git config --global advice.detachedHead false && git clone https://github.com/WWBN/AVideo-Encoder.git Encoder
+  #cd /var/www/html/AVideo && git config --global advice.detachedHead false && git clone https://github.com/WWBN/AVideo-Encoder.git Encoder
   # Configure AVideo permissions
   chown -R www-data:www-data /var/www/html/AVideo
 fi
