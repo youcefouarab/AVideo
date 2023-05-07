@@ -481,10 +481,17 @@ abstract class ObjectYPT implements ObjectInterface
         return false;
     }
 
-    public static function setCache($name, $value, $addSubDirs = true)
+    public static function setCacheGlobal($name, $value, $addSubDirs = true)
+    {
+        return self::setCache($name, $value, $addSubDirs, true);
+    }
+    public static function setCache($name, $value, $addSubDirs = true, $ignoreMetadata=false)
     {
         if (!self::isToSaveInASubDir($name) && $content = self::shouldUseDatabase($value)) {
-            return Cache::_setCache($name, $content);
+            $saved = Cache::_setCache($name, $content);
+            if(!empty($saved)){
+                return $saved;
+            }
         }
         
         $content = _json_encode($value);
@@ -496,7 +503,7 @@ abstract class ObjectYPT implements ObjectInterface
             return false;
         }
 
-        $cachefile = self::getCacheFileName($name, true, $addSubDirs);
+        $cachefile = self::getCacheFileName($name, true, $addSubDirs, $ignoreMetadata);
         make_path($cachefile);
         //_error_log("YPTObject::setCache log error [{$name}] $cachefile filemtime = ".filemtime($cachefile));
         $bytes = @file_put_contents($cachefile, $content);
@@ -560,7 +567,7 @@ abstract class ObjectYPT implements ObjectInterface
             $getCachesProcessed = [];
         }
         //if($name=='getVideosURL_V2video_220721204450_v21b7'){var_dump($name);exit;}
-        $cachefile = self::getCacheFileName($name, false, $addSubDirs);
+        $cachefile = self::getCacheFileName($name, false, $addSubDirs, $ignoreMetadata);
         //if($name=='getVideosURL_V2video_220721204450_v21b7'){var_dump($cachefile);exit;}//exit;
         self::setLastUsedCacheFile($cachefile);
         //_error_log("getCache: cachefile [$name] ".$cachefile);
@@ -732,7 +739,7 @@ abstract class ObjectYPT implements ObjectInterface
         return str_starts_with($filename, '/') || str_ends_with($filename, '/');
     }
 
-    public static function getCacheDir($filename = '', $createDir = true, $addSubDirs = true)
+    public static function getCacheDir($filename = '', $createDir = true, $addSubDirs = true, $ignoreMetadata = false)
     {
         global $_getCacheDir, $global;
 
@@ -754,7 +761,7 @@ abstract class ObjectYPT implements ObjectInterface
         $filename = self::cleanCacheName($filename);
         if (!empty($filename)) {
             $tmpDir .= $filename . DIRECTORY_SEPARATOR;
-            if ($addSubDirs) {
+            if ($addSubDirs && empty($ignoreMetadata)) {
                 $domain = getDomain();
                 // make sure you separete http and https cache
                 $protocol = isset($_SERVER["HTTPS"]) ? 'https' : 'http';
@@ -790,10 +797,10 @@ abstract class ObjectYPT implements ObjectInterface
         return $tmpDir;
     }
 
-    public static function getCacheFileName($name, $createDir = true, $addSubDirs = true)
+    public static function getCacheFileName($name, $createDir = true, $addSubDirs = true, $ignoreMetadata=false)
     {
         global $global;
-        $tmpDir = self::getCacheDir($name, $createDir, $addSubDirs);
+        $tmpDir = self::getCacheDir($name, $createDir, $addSubDirs, $ignoreMetadata);
         $uniqueHash = sha1($name . $global['salt']); // add salt for security reasons 
         return $tmpDir . $uniqueHash . '.cache';
     }

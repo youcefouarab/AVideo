@@ -1723,6 +1723,8 @@ Click <a href=\"{link}\">here</a> to join our live.";
 
         $btn = '<button onclick="avideoModalIframeLarge(\'' . $global['webSiteRootURL'] . 'plugin/Live/view/editor.php\');" class="btn btn-primary btn-sm btn-xs btn-block"><i class="fa fa-edit"></i> ' . __('Edit Live Servers') . '</button>';
         $btn .= '<button onclick="avideoAjax(webSiteRootURL+\'plugin/Live/view/finishAll.json.php\', {});" class="btn btn-primary btn-sm btn-xs btn-block"><i class="fas fa-ban"></i> ' . __('Mark all as finished') . '</button>';
+        $btn .= '<button onclick="avideoAjax(webSiteRootURL+\'plugin/Live/view/deleteHistory.json.php\', {});" class="btn btn-primary btn-sm btn-xs btn-block"><i class="fas fa-trash"></i> ' . __('Delete History') . '</button>';
+        
         if ($obj->server_type->value) {
             if ($obj->useLiveServers) {
                 $servers = Live_servers::getAll();
@@ -2464,10 +2466,15 @@ Click <a href=\"{link}\">here</a> to join our live.";
     }
 
     public static function isKeyLiveInStats($key, $live_servers_id = 0, $live_index = '', $force_recreate = false, $doNotCheckDatabase = true) {
-        global $_isLiveFromKey;
+        global $_isLiveFromKey, $global;
         if (empty($key) || $key == '-1') {
             _error_log('Live::isKeyLiveInStats key is empty');
             return false;
+        }
+        
+        if (!empty($global['disableIsKeyLiveInStats'])) {
+            _error_log('disableIsKeyLiveInStats');
+            return true;
         }
         $index = "$key, $live_servers_id,$live_index";
         if (!isset($_isLiveFromKey)) {
@@ -2522,12 +2529,10 @@ Click <a href=\"{link}\">here</a> to join our live.";
                     if (preg_match("/{$key}.*/", $value['key'])) {
                         if (empty($live_servers_id)) {
                             $_isLiveFromKey[$index] = true;
-                            $_isLiveFromKey[$index] = $_isLiveFromKey[$index];
                             break 2;
                         } else {
                             if (intval(@$value['live_servers_id']) == $live_servers_id) {
                                 $_isLiveFromKey[$index] = true;
-                                $_isLiveFromKey[$index] = $_isLiveFromKey[$index];
                                 break 2;
                             }
                         }
@@ -2545,12 +2550,10 @@ Click <a href=\"{link}\">here</a> to join our live.";
                         if (preg_match("/{$key}.*/", $value['key'])) {
                             if (empty($live_servers_id)) {
                                 $_isLiveFromKey[$index] = true;
-                                $_isLiveFromKey[$index] = $_isLiveFromKey[$index];
                                 break 2;
                             } else {
                                 if (intval(@$value['live_servers_id']) == $live_servers_id) {
                                     $_isLiveFromKey[$index] = true;
-                                    $_isLiveFromKey[$index] = $_isLiveFromKey[$index];
                                     break 2;
                                 }
                             }

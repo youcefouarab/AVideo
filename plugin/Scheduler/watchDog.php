@@ -35,7 +35,7 @@ if ($objParam = AVideoPlugin::getDataObjectIfEnabled('Live')) {
             if (!is_port_open($port)) {
                 _error_log("WatchDog: Live port is not opened [{$port}]");
                 exec("{$nginxFile} -s stop");
-                exec("{$nginxFile}");
+                execAsync("{$nginxFile}");
             }else{
                 //_error_log("WatchDog: Live port is opened [{$port}]");
             }
@@ -43,10 +43,10 @@ if ($objParam = AVideoPlugin::getDataObjectIfEnabled('Live')) {
 
         if ($obj->watchDogLiveServerSSL) {
             // check live ssl
-            if (is_ssl_certificate_valid($port, $address)) {
+            if (!is_ssl_certificate_valid($port, $address)) {
                 _error_log("WatchDog: Live SSL is invalid [port=$port, address=$address]");
                 exec("{$nginxFile} -s stop");
-                exec("{$nginxFile}");
+                execAsync("{$nginxFile}");
             }else{
                 //_error_log("WatchDog: Live SSL is valid [port=$port, address=$address]");
             }
