@@ -211,6 +211,10 @@ abstract class ObjectYPT implements ObjectInterface
             $_POST['current'] = intval($_POST['current']);
             $current = ($_POST['current'] - 1) * $_POST['rowCount'];
             $current = $current < 0 ? 0 : $current;
+            if($current>1000){
+                _error_log("Object current>1000 ERROR die [currentP={$current} current={$_POST['current']} rowCount={$_POST['rowCount']}] ".getSelfURI().' '.json_encode($_SERVER));
+                _error_log("Object current>1000 ERROR [{$current}] ".json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)));
+            }
             $sql .= " LIMIT $current, {$_POST['rowCount']} ";
         } else {
             $_POST['current'] = 0;
@@ -284,7 +288,6 @@ abstract class ObjectYPT implements ObjectInterface
             _error_log("Save error, table " . static::getTableName() . " does not exists", AVideoLog::$ERROR);
             return false;
         }
-
         if (!self::ignoreTableSecurityCheck() && isUntrustedRequest("SAVE " . static::getTableName())) {
             return false;
         }
@@ -589,6 +592,7 @@ abstract class ObjectYPT implements ObjectInterface
         if (empty($ignoreSessionCache)) {
             $session = self::getSessionCache($name, $lifetime);
             if (!empty($session)) {
+                self::setLastUsedCacheMode("Session cache \$_SESSION['user']['sessionCache'][$name]");
                 $_getCache[$name] = $session;
                 //_error_log('getCache: '.__LINE__);
                 return $session;
@@ -598,6 +602,7 @@ abstract class ObjectYPT implements ObjectInterface
         if (class_exists('Cache')) {
             $cache = Cache::getCache($name, $lifetime, $ignoreMetadata);
             if (!empty($cache)) {
+                self::setLastUsedCacheMode("Cache::getCache($name, $lifetime, $ignoreMetadata)");
                 return $cache;
             }
         }
@@ -700,6 +705,9 @@ abstract class ObjectYPT implements ObjectInterface
 
     public static function deleteALLCache()
     {
+        if (!class_exists('Cache')) {
+            AVideoPlugin::loadPluginIfEnabled('Cache');
+        }
         if (class_exists('Cache')) {
             Cache::deleteAllCache();
         }

@@ -1634,7 +1634,7 @@ function getVideosURL_V2($fileName, $recreateCache = false)
         }
         $files = array_merge($extraFiles, $files);
 
-        ObjectYPT::setCache($cacheName, $files);
+        ObjectYPT::setCacheGlobal($cacheName, $files);
     }
     if (is_array($files)) {
         // sort by resolution
@@ -1803,7 +1803,7 @@ function getimgsize($file_src)
             $size = [1024, 768];
         }
 
-        ObjectYPT::setCache($name, $size);
+        ObjectYPT::setCacheGlobal($name, $size);
         $_getimagesize[$name] = $size;
     }
     return $size;
@@ -1907,6 +1907,14 @@ function im_resize($file_src, $file_dest, $wd, $hd, $q = 80)
         $wd = $ws;
         $hd = $hs;
     }
+
+    if(empty($hd)){
+        $hd = $hs;
+    }
+    if(empty($wd)){
+        $wd = $ws;
+    }
+
     $wc = ($wd * $hs) / $hd;
 
     if ($wc <= $ws) {
@@ -1957,30 +1965,26 @@ function im_resize($file_src, $file_dest, $wd, $hd, $q = 80)
     return true;
 }
 
-/*
-  function scaleUpAndMantainAspectRatioFinalSizes($new_w, $old_w, $new_h, $old_h) {
-
-  if ($new_w < $new_h) {
-  $aspectRatio = $new_w / $old_w;
-  $aspectRatio2 = $new_h / $old_h;
-  } else {
-  $aspectRatio = $new_h / $old_h;
-  $aspectRatio2 = $new_w / $old_w;
-  }
-
-  $thumb_w = $old_w * $aspectRatio;
-  $thumb_h = $old_h * $aspectRatio;
-
-  if ($thumb_w > $new_w || $thumb_h > $new_h) {
-  //var_dump($thumb_w, $thumb_h);
-  $thumb_w = $old_w * $aspectRatio2;
-  $thumb_h = $old_h * $aspectRatio2;
-  }
-  return ['w' => $thumb_w, 'h' => $thumb_h];
-  } */
-
 function scaleUpAndMantainAspectRatioFinalSizes($new_w, $old_w, $new_h, $old_h)
 {
+    
+    if (empty($old_h)) {
+        $old_h = $new_h;
+    }
+    if (empty($new_h)) {
+        $new_h = $old_h;
+    }
+    if (empty($old_w)) {
+        $old_w = $new_w;
+    }
+    if (empty($new_w)) {
+        $new_w = $old_w;
+    }
+
+    if (empty($old_h) || empty($new_h)) {
+        // Return an error or handle the case accordingly
+        return ['w' => 0, 'h' => 0];
+    }
     $aspect_ratio_src = $old_w / $old_h;
     $aspect_ratio_new = $new_w / $new_h;
 
@@ -3026,7 +3030,7 @@ function url_get_contents_with_cache($url, $lifeTime = 60, $ctx = "", $timeout =
     }
     _error_log("url_get_contents_with_cache no cache [$url] " . json_encode(debug_backtrace()));
     $return = url_get_contents($url, $ctx, $timeout, $debug, $mantainSession);
-    $response = ObjectYPT::setCache($cacheName, $return);
+    $response = ObjectYPT::setCacheGlobal($cacheName, $return);
     _error_log("url_get_contents_with_cache setCache {$url} " . json_encode($response));
     return $return;
 }
@@ -3214,7 +3218,7 @@ function thereIsAnyRemoteUpdate()
             }
         }
     }
-    ObjectYPT::setCache($cacheName, $_SESSION['sessionCache'][$name]);
+    ObjectYPT::setCacheGlobal($cacheName, $_SESSION['sessionCache'][$name]);
     return $_SESSION['sessionCache'][$name];
 }
 
@@ -4321,6 +4325,7 @@ function convertImageIfNotExists($source, $destination, $width, $height, $scaleU
         }
     }
     if (!file_exists($destination)) {
+        //_error_log("convertImageIfNotExists($source, $destination, $width, $height)");
         try {
             $tmpDir = getTmpDir();
             $fileConverted = $tmpDir . "_jpg_" . uniqid() . ".jpg";
@@ -4428,7 +4433,7 @@ function getLdJson($videos_id)
         ]
         }
     </script>';
-    ObjectYPT::setCache("getLdJson{$videos_id}", $output);
+    ObjectYPT::setCacheGlobal("getLdJson{$videos_id}", $output);
     echo $output;
 }
 
@@ -4471,7 +4476,7 @@ function getItemprop($videos_id)
     <span itemprop="embedUrl" content="' . parseVideos(Video::getLinkToVideo($videos_id)) . '"></span>
     <span itemprop="interactionCount" content="' . $video['views_count'] . '"></span>';
 
-    ObjectYPT::setCache("getItemprop{$videos_id}", $output);
+    ObjectYPT::setCacheGlobal("getItemprop{$videos_id}", $output);
     echo $output;
 }
 
@@ -6193,22 +6198,37 @@ function doNOTOrganizeHTMLIfIsPagination()
 
 function getCurrentPage()
 {
+    global $lastCurrent;
+    $current = 1;
     if (!empty($_REQUEST['current'])) {
-        return intval($_REQUEST['current']);
+        $current = intval($_REQUEST['current']);
     } elseif (!empty($_POST['current'])) {
-        return intval($_POST['current']);
+        $current = intval($_POST['current']);
     } elseif (!empty($_GET['current'])) {
-        return intval($_GET['current']);
+        $current = intval($_GET['current']);
     } elseif (isset($_GET['start']) && isset($_GET['length'])) { // for the bootgrid
         $start = intval($_GET['start']);
         $length = intval($_GET['length']);
         if (!empty($start) && !empty($length)) {
-            return floor($start / $length) + 1;
+            $current = floor($start / $length) + 1;
         }
     } elseif (!empty($_GET['page'])) {
-        return intval($_GET['page']);
+        $current = intval($_GET['page']);
     }
-    return 1;
+    if(isBot() && $current>10){
+        _error_log("getCurrentPage current>1000 ERROR [{$current}] ".json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)));
+        _error_log("getCurrentPage current>1000 ERROR bot die [{$current}] ".getSelfURI().' '.json_encode($_SERVER));
+        exit;
+    }
+    if($current>100){
+        if(!User::isLogged() || $current>1000){
+            _error_log("getCurrentPage current>1000 ERROR [{$current}] ".json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)));
+            _error_log("getCurrentPage current>1000 ERROR die [{$current}] ".getSelfURI().' '.json_encode($_SERVER));
+            exit;
+        }
+    }
+    $lastCurrent = $current;
+    return $current;
 }
 
 function getTrendingLimit()
@@ -6272,6 +6292,10 @@ function getSearchVar()
         $search = $_REQUEST['search']['value'];
     }
     return mb_strtolower($search);
+}
+
+function isSearch(){
+    return !empty(getSearchVar());
 }
 
 $cleanSearchHistory = '';
@@ -8499,7 +8523,7 @@ function isURL200($url, $forceRecheck = false)
         }
     }
 
-    ObjectYPT::setCache($name, json_encode($object));
+    ObjectYPT::setCacheGlobal($name, json_encode($object));
 
     return $object->result;
 }
@@ -8512,9 +8536,9 @@ function isURL200Clear()
     rrmdir($cacheDir);
 }
 
-function deleteStatsNotifications()
+function deleteStatsNotifications($clearFirstPage = false)
 {
-    Live::deleteStatsCache();
+    Live::deleteStatsCache($clearFirstPage);
     $cacheName = "getStats" . DIRECTORY_SEPARATOR . "getStatsNotifications";
     ObjectYPT::deleteCache($cacheName);
 }
@@ -8717,7 +8741,7 @@ function getStatsNotifications($force_recreate = false, $listItIfIsAdminOrOwner 
     unset($_POST['sort']);
     if ($force_recreate) {
         if ($isLiveEnabled) {
-            Live::deleteStatsCache();
+            deleteStatsNotifications();
         }
     } else {
         if (!empty($__getStatsNotifications__)) {
@@ -11110,3 +11134,48 @@ function rowToRoku($row)
     $movie->content = $content;
     return $movie;
 }
+
+function convertThumbsIfNotExists($source, $destination){
+    global $advancedCustom;
+    if(file_exists($destination)){
+        return true;
+    }
+    if(!file_exists($source)){
+        return false;
+    }
+    if (empty($advancedCustom)) {
+        $advancedCustom = AVideoPlugin::loadPlugin("CustomizeAdvanced");
+    }
+    $width = 300;
+    $height = 300;
+    $orientation = getImageOrientation($source);
+
+    if($orientation == "landscape"){
+        $width = $advancedCustom->thumbsWidthLandscape;
+        $height = $advancedCustom->thumbsHeightLandscape;
+    }else if($orientation == "portrait"){
+        $width = $advancedCustom->thumbsWidthPortrait;
+        $height = $advancedCustom->thumbsHeightPortrait;
+    }
+
+    return convertImageIfNotExists($source, $destination, $width, $height, true);
+}
+
+function getImageOrientation($imagePath) {
+    // Get the image dimensions
+    $imageSize = getimagesize($imagePath);
+    
+    // Check the width and height
+    $width = $imageSize[0];
+    $height = $imageSize[1];
+    
+    // Determine the orientation
+    if ($width > $height) {
+        return "landscape";
+    } else if ($width < $height) {
+        return "portrait";
+    } else {
+        return "square";
+    }
+}
+
