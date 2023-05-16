@@ -87,7 +87,8 @@ if [ -f /var/www/html/AVideo/Encoder/index.php ]; then
 else
   echo "entrypoint -- Create new  Encoder configuration..."
   # Configure AVideo Encoder
-  #cd /var/www/html/AVideo && git config --global advice.detachedHead false && git clone https://github.com/WWBN/AVideo-Encoder.git Encoder
+  cd /var/www/html/AVideo && git config --global advice.detachedHead false && git clone https://github.com/WWBN/AVideo-Encoder.git Encoder
+  chown -R www-data:www-data /var/www/html/AVideo
 fi
 
 if [ -d /var/www/html/AVideo/Encoder/videos ]; then
