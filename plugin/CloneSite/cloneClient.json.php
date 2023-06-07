@@ -91,10 +91,20 @@ $log->add("Clone: Good start! the server has answered");
 
 
 
-$json->sqlFile = escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $json->sqlFile));
-$json->videoFiles = escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $json->videoFiles));
-$json->photoFiles = escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $json->photoFiles));
-$objClone->cloneSiteURL = escapeshellarg($objClone->cloneSiteURL);
+$json->sqlFile = str_replace("'", '', escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $json->sqlFile)));
+foreach ($json->videoFiles as $key => $value) {
+    $json->videoFiles[$key]->filename = str_replace("'", '', escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $value->filename)));
+    $json->videoFiles[$key]->url = str_replace("'", '', escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $value->url)));
+    $json->videoFiles[$key]->filesize = intval($value->filesize);
+    $json->videoFiles[$key]->filemtime = intval($value->filemtime);
+}
+foreach ($json->photoFiles as $key => $value) {
+    $json->photoFiles[$key]->filename = str_replace("'", '', escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $value->filename)));
+    $json->photoFiles[$key]->url = str_replace("'", '', escapeshellarg(preg_replace('/[^a-z0-9_.-]/i', '', $value->url)));
+    $json->photoFiles[$key]->filesize = intval($value->filesize);
+    $json->photoFiles[$key]->filemtime = intval($value->filemtime);
+}
+$objClone->cloneSiteURL = str_replace("'", '', escapeshellarg($objClone->cloneSiteURL));
 
 // get dump file
 $cmd = "wget -O {$clonesDir}{$json->sqlFile} {$objClone->cloneSiteURL}videos/cache/clones/{$json->sqlFile}";
@@ -103,11 +113,13 @@ exec($cmd . " 2>&1", $output, $return_val);
 if ($return_val !== 0) {
     $log->add("Clone Error: " . print_r($output, true));
 }
-$log->add("Clone: Nice! we got the MySQL Dump file");
+$log->add("Clone: Nice! we got the MySQL Dump file [{$objClone->cloneSiteURL}videos/cache/clones/{$json->sqlFile}]");
 
 // remove the first warning line
 $file = "{$clonesDir}{$json->sqlFile}";
+//$log->add("Clone: MySQL Dump $file");
 $contents = file($file, FILE_IGNORE_NEW_LINES);
+//$log->add("Clone: MySQL Dump contents ". json_encode($contents));
 $first_line = array_shift($contents);
 file_put_contents($file, implode("\r\n", $contents));
 

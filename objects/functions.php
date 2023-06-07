@@ -597,7 +597,7 @@ function parseDurationToSeconds($str)
     if (empty($durationParts[2])) {
         $durationParts[2] = 0;
     }
-    $minutes = intval(($durationParts[0]) * 60) + intval($durationParts[1]);
+    $minutes = (intval($durationParts[0]) * 60) + intval($durationParts[1]);
     return intval($durationParts[2]) + ($minutes * 60);
 }
 
@@ -1479,7 +1479,7 @@ function getVideosURL_V2($fileName, $recreateCache = false)
     //$recreateCache = true;
     $cleanfilename = Video::getCleanFilenameFromFile($fileName);
 
-    if (!empty($getVideosURL_V2Array[$cleanfilename])) {
+    if (empty($recreateCache) && !empty($getVideosURL_V2Array[$cleanfilename])) {
         return $getVideosURL_V2Array[$cleanfilename];
     }
 
@@ -4978,7 +4978,7 @@ function getCacheDir()
 {
     $p = AVideoPlugin::loadPlugin("Cache");
     if (empty($p)) {
-        return addLastSlash(_sys_get_temp_dir());
+        return addLastSlash(sys_get_temp_dir());
     }
     return $p->getCacheDir();
 }
@@ -6215,17 +6215,14 @@ function getCurrentPage()
     } elseif (!empty($_GET['page'])) {
         $current = intval($_GET['page']);
     }
-    if(isBot() && $current>10){
+    if($current>1000 && !User::isLogged()){
         _error_log("getCurrentPage current>1000 ERROR [{$current}] ".json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)));
-        _error_log("getCurrentPage current>1000 ERROR bot die [{$current}] ".getSelfURI().' '.json_encode($_SERVER));
+        _error_log("getCurrentPage current>1000 ERROR NOT LOGGED die [{$current}] ".getSelfURI().' '.json_encode($_SERVER));
         exit;
-    }
-    if($current>100){
-        if(!User::isLogged() || $current>1000){
-            _error_log("getCurrentPage current>1000 ERROR [{$current}] ".json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)));
-            _error_log("getCurrentPage current>1000 ERROR die [{$current}] ".getSelfURI().' '.json_encode($_SERVER));
-            exit;
-        }
+    }else if($current>100 && isBot()){
+        _error_log("getCurrentPage current>100 ERROR [{$current}] ".json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)));
+        _error_log("getCurrentPage current>100 ERROR bot die [{$current}] ".getSelfURI().' '.json_encode($_SERVER));
+        exit;
     }
     $lastCurrent = $current;
     return $current;
@@ -7071,8 +7068,32 @@ function getSharePopupButton($videos_id, $url = "", $title = "")
     include $global['systemRootPath'] . 'view/include/socialModal.php';
 }
 
-function forbiddenPage($message = '', $logMessage = false, $unlockPassword = '', $namespace = '', $pageCode = '403 Forbidden')
-{
+
+function getContentType() {
+    $contentType = '';
+    $headers = headers_list(); // get list of headers
+    foreach ($headers as $header) { // iterate over that list of headers
+        if (stripos($header, 'Content-Type:') !== false) { // if the current header has the string "Content-Type" in it
+            $headerParts = explode(':', $header); // split the string, getting an array
+            $headerValue = trim($headerParts[1]); // take second part as value
+            $contentType = $headerValue;
+            break;
+        }
+    }
+    return $contentType;
+}
+
+function isContentTypeJson() {
+    $contentType = getContentType();
+    return preg_match('/json/i', $contentType);
+}
+
+function isContentTypeXML() {
+    $contentType = getContentType();
+    return preg_match('/xml/i', $contentType);
+}
+
+function forbiddenPage($message = '', $logMessage = false, $unlockPassword = '', $namespace = '', $pageCode = '403 Forbidden') {
     global $global;
     if (!empty($unlockPassword)) {
         if (empty($namespace)) {
@@ -7095,18 +7116,9 @@ function forbiddenPage($message = '', $logMessage = false, $unlockPassword = '',
     if ($logMessage) {
         _error_log($message);
     }
-    $contentType = '';
-    $headers = headers_list(); // get list of headers
-    foreach ($headers as $header) { // iterate over that list of headers
-        if (stripos($header, 'Content-Type:') !== false) { // if the current header hasthe String "Content-Type" in it
-            $headerParts = explode(':', $header); // split the string, getting an array
-            $headerValue = trim($headerParts[1]); // take second part as value
-            $contentType = $headerValue;
-            break;
-        }
-    }
+
     header('HTTP/1.0 ' . $pageCode);
-    if (empty($unlockPassword) && preg_match('/json/i', $contentType)) {
+    if (empty($unlockPassword) && isContentTypeJson()) {
         header("Content-Type: application/json");
         $obj = new stdClass();
         $obj->error = true;
@@ -8550,6 +8562,9 @@ function getLiveVideosFromUsers_id($users_id)
         $stats = getStatsNotifications();
         foreach ($stats["applications"] as $key => $value) {
             if (empty($value['users_id']) || $users_id != $value['users_id']) {
+                if(!empty($_REQUEST['debug'])){
+                    _error_log("getLiveVideosFromUsers_id($users_id) != {$value['users_id']}");
+                }
                 continue;
             }
             $videos[] = getLiveVideosObject($value);
@@ -9846,6 +9861,9 @@ function listFolderFiles($dir)
     if (empty($dir)) {
         return [];
     }
+    if(!is_dir($dir)){
+        return [];
+    }
     $ffs = scandir($dir);
 
     unset($ffs[array_search('.', $ffs, true)]);
@@ -10664,7 +10682,9 @@ function getHtaccessForVideoVersion($videosHtaccessFile)
 function fileIsAnValidImage($filepath)
 {
     if (file_exists($filepath)) {
-        if (!function_exists('exif_imagetype')) {
+        if(filesize($filepath) === 42342){
+            return false;
+        }else if (!function_exists('exif_imagetype')) {
             if ((list($width, $height, $type, $attr) = getimagesize($filepath)) !== false) {
                 return $type;
             }

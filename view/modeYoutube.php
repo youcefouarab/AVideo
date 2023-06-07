@@ -250,7 +250,9 @@ if (!empty($evideo)) {
         $v = Video::getVideoFromCleanTitle($_GET['videoName']);
     }
     if (empty($v) && empty($videosPlayList[$playlist_index]['id'])) {
-        videoNotFound("Line code ".__LINE__);
+        $response = Video::whyUserCannotWatchVideo(User::getId(), $video['id']);
+        $html = "<ul><li>".implode('</li><li>', $response->why)."</li></ul>";
+        videoNotFound($html);
     } else {
         $modeYouTubeTimeLog['Code part 4'] = microtime(true) - $modeYouTubeTime;
         $modeYouTubeTime = microtime(true);
@@ -283,6 +285,18 @@ if (empty($video)) {
         videoNotFound('ERROR 3: The video is not available video ID is empty');
     }
 }
+
+if (empty($video)) {
+    videoNotFound('Please try again');
+    exit;
+}
+
+if (!User::canWatchVideoWithAds($video['id'])) {
+    forbiddenPage('This video is private');
+    exit;
+}
+
+
 $metaDescription = " {$video['id']}";
 
 // make sure the title tag does not have more then 70 chars
