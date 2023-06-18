@@ -350,10 +350,10 @@ class PlayList extends ObjectYPT {
     public static function getAllFromUserVideo($userId, $videos_id, $publicOnly = true, $status = false) {
         $TimeLog1 = "playList getAllFromUser($userId, $videos_id)";
         TimeLogStart($TimeLog1);
-        $cacheName = "getAllFromUserVideo_{$videos_id}".DIRECTORY_SEPARATOR."getAllFromUserVideo($userId, $videos_id)".intval($publicOnly).$status;
+        $cacheName = "getAllFromUserVideo_{$videos_id}" . DIRECTORY_SEPARATOR . "getAllFromUserVideo($userId, $videos_id)" . intval($publicOnly) . $status;
         //var_dump($playlists_id, $sql);exit;
         $rows = self::getCacheGlobal($cacheName, 0);
-        if(empty($rows)){
+        if (empty($rows)) {
             $rows = self::getAllFromUser($userId, $publicOnly, $status);
             TimeLogEnd($TimeLog1, __LINE__);
             foreach ($rows as $key => $value) {
@@ -363,7 +363,7 @@ class PlayList extends ObjectYPT {
             }
             TimeLogEnd($TimeLog1, __LINE__);
             self::setCacheGlobal($cacheName, $rows);
-        }else{
+        } else {
             $rows = object_to_array($rows);
         }
         TimeLogEnd($TimeLog1, __LINE__);
@@ -373,7 +373,7 @@ class PlayList extends ObjectYPT {
 
     private static function removeCache($videos_id) {
         $cacheName = "getAllFromUserVideo_{$videos_id}";
-        self::deleteCacheFromPattern($name);
+        self::deleteCacheFromPattern($cacheName);
     }
 
     public static function getSuggested() {
@@ -476,7 +476,7 @@ class PlayList extends ObjectYPT {
                     $row['videos'] = Video::getVideosPaths($row['filename'], true);
                     $row['progress'] = Video::getVideoPogressPercent($row['videos_id']);
                     $row['title'] = UTF8encode($row['title']);
-                    $row['description'] = UTF8encode($row['description']);
+                    $row['description'] = UTF8encode(@$row['description']);
                     $row['tags'] = Video::getTags($row['videos_id']);
                     if (AVideoPlugin::isEnabledByName("VideoTags")) {
                         $row['videoTags'] = Tags::getAllFromVideosId($row['videos_id']);
@@ -742,7 +742,7 @@ class PlayList extends ObjectYPT {
         return sqlDAL::writeSql($sql);
     }
 
-    public function addVideo($videos_id, $add, $order = 0) {
+    public function addVideo($videos_id, $add, $order = 0, $_deleteCache = true) {
         global $global;
 
         $this->id = intval($this->id);
@@ -761,16 +761,22 @@ class PlayList extends ObjectYPT {
             $values[] = $this->id;
             $values[] = $videos_id;
         } else {
-            $this->addVideo($videos_id, false);
+            $this->addVideo($videos_id, false, 0, false);
             $sql = "INSERT INTO playlists_has_videos ( playlists_id, videos_id , `order`) VALUES (?, ?, ?) ";
             $formats = "iii";
             $values[] = $this->id;
             $values[] = $videos_id;
             $values[] = $order;
         }
+        //_error_log('playlistSort addVideo line=' . __LINE__);
         $result = sqlDAL::writeSql($sql, $formats, $values);
-        self::deleteCacheDir($this->id);
-        self::removeCache($videos_id);
+        if($_deleteCache === true){
+            //_error_log('playlistSort addVideo line=' . __LINE__ .' '. json_encode(debug_backtrace()));
+            self::deleteCacheDir($this->id);
+            //_error_log('playlistSort addVideo line=' . __LINE__);
+            self::removeCache($videos_id);
+        }
+        //_error_log('playlistSort addVideo line=' . __LINE__);
         return $result;
     }
 
